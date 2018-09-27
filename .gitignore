@@ -1,0 +1,4 @@
+*
+!.gitignore
+!A1/*.h
+!A1/*.c
