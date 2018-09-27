@@ -1,8 +1,8 @@
 /*
 ============================================================================
 Filename    : integral.c
-Author      : Sébastien Gachoud /
-SCIPER		: 250083 /
+Author      : Sébastien Gachoud / Martino Milania
+SCIPER      : 250083 / 000000
 ============================================================================
 */
 
@@ -31,7 +31,7 @@ int main (int argc, const char *argv[]) {
     set_clock();
 
     /* You can use your self-defined funtions by replacing identity_f. */
-    integral = integrate (num_threads, num_samples, a, b, poly_f);
+    integral = integrate (num_threads, num_samples, a, b, square_f);
 
     printf("- Using %d threads: integral on [%d,%d] = %.15g computed in %.4gs.\n", num_threads, a, b, integral, elapsed_time());
 
@@ -42,26 +42,37 @@ int main (int argc, const char *argv[]) {
 double integrate (int num_threads, int samples, int a, int b, double (*f)(double)) {
     double integral;
 
-    rand_gen gen = init_rand();
     double sum = 0;
     int l = b-a;
+
+    rand_gen gens[num_threads];
+    int sums[num_threads];
+
+    #pragma omp parallel for num_threads (num_threads)
+    for (int i = 0; i < num_threads; ++i)
+    {
+        gens[i] = init_rand();  //use of i instead of omp_get_thread_num() because 
+                                //we don't care whitch gen is used by a specific 
+                                //thread as long they all use a diffrent one
+        sums[i] = 0;
+    }
 
     #pragma omp parallel for num_threads (num_threads)
     for(int i = 0; i < samples; i++)
     {
-    	double random;
-    	#pragma omp critical
-    	{
-    		random = next_rand(gen);
-    	}
+    	double random = next_rand(gens[omp_get_thread_num()]);
 
     	double area = l * f(a + random * l);
 
-    	#pragma omp atomic
-    	sum += area;
+    	sums[omp_get_thread_num()] += area;
     }
 
-    free_rand(gen);
+    for (int i = 0; i < num_threads; ++i)
+    {
+        free_rand(gens[i]);
+        sum += sums[i];
+    }
+
     integral = sum / (double)samples;
 
     return integral;
