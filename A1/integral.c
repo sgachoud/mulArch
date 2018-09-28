@@ -46,7 +46,7 @@ double integrate (int num_threads, int samples, int a, int b, double (*f)(double
     int l = b-a;
 
     rand_gen gens[num_threads];
-    int sums[num_threads];
+    double sums[num_threads];
 
     #pragma omp parallel for num_threads (num_threads)
     for (int i = 0; i < num_threads; ++i)
@@ -72,7 +72,6 @@ double integrate (int num_threads, int samples, int a, int b, double (*f)(double
         free_rand(gens[i]);
         sum += sums[i];
     }
-
     integral = sum / (double)samples;
 
     return integral;
