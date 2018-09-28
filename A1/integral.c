@@ -1,8 +1,8 @@
 /*
 ============================================================================
 Filename    : integral.c
-Author      : Sébastien Gachoud / Martino Milania
-SCIPER      : 250083 / 000000
+Author      : Sébastien Gachoud / Martino Milani
+SCIPER      : 250083 / 286204
 ============================================================================
 */
 
