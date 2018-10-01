@@ -1,5 +1,5 @@
 
-CC = gcc
+CC = gcc-8
 CFLAGS = -std=gnu99 -O3 -fopenmp -Wall
 
 all: pi integral test
