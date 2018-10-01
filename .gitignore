@@ -4,4 +4,5 @@
 A1/**
 !A1/*.h
 !A1/*.c
+!A1/*.md
 !A1/Makefile
