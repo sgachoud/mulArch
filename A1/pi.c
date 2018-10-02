@@ -42,20 +42,23 @@ double calculate_pi (int num_threads, int samples) {
     // parallel code
     #pragma omp parallel
     {
-      int cont = 0;         // to solve FALSE SHARING we declare a local counter on
+      	int cont = 0;         // to solve FALSE SHARING we declare a local counter on
                             // the private stack of each thread
-      rand_gen gen = init_rand();  // by having modified init_rand
+      	rand_gen gen = init_rand();  // by having modified init_rand
                                              // we assure to have different random
                                              // generators
+      	int max_iter = samples/num_threads;
+		if(omp_get_thread_num() == 0)
+			max_iter += samples%num_threads;
 
-      for(int i=0; i<samples/num_threads; i++){
-        double x = next_rand(gen);
-      	double y = next_rand(gen);
-        if(x*x + y*y <= 1)
-      		cont++;
-      }
-      sums[omp_get_thread_num()] = cont;
-      free_rand(gen);
+	    for(int i = 0; i < max_iter; i++){
+	        double x = next_rand(gen);
+	      	double y = next_rand(gen);
+	        if(x*x + y*y <= 1)
+	      		cont++;
+	    }
+      	sums[omp_get_thread_num()] = cont;
+      	free_rand(gen);
     }
 
     // serial code

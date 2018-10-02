@@ -54,7 +54,11 @@ double integrate (int num_threads, int samples, int a, int b, double (*f)(double
                                            // we assure to have different random
                                            // generators
 
-    for(int i=0; i<samples/num_threads; i++){
+    int max_iter = samples/num_threads;
+	if(omp_get_thread_num() == 0)
+		max_iter += samples%num_threads;
+
+    for(int i=0; i < max_iter; i++){
       double x = next_rand(gen);
       sum += l * f(a + x * l);
     }
