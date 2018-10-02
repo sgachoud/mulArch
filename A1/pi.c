@@ -39,14 +39,12 @@ double calculate_pi (int num_threads, int samples) {
     int sums[num_threads];  // this stays on the same cahe line: causes FALSE SHARING
                             // if used inside the parallel code many times
     omp_set_num_threads(num_threads);
-    printf("calculate pi");
     // parallel code
     #pragma omp parallel
     {
       int cont = 0;         // to solve FALSE SHARING we declare a local counter on
                             // the private stack of each thread
-      int thread_num = omp_get_thread_num();
-      rand_gen gen = init_rand((unsigned short)thread_num);  // by having modified init_rand
+      rand_gen gen = init_rand();  // by having modified init_rand
                                              // we assure to have different random
                                              // generators
 
@@ -56,7 +54,7 @@ double calculate_pi (int num_threads, int samples) {
         if(x*x + y*y <= 1)
       		cont++;
       }
-      sums[thread_num] = cont;
+      sums[omp_get_thread_num()] = cont;
       free_rand(gen);
     }
 

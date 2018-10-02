@@ -43,16 +43,14 @@ double integrate (int num_threads, int samples, int a, int b, double (*f)(double
 
   double integral;
   unsigned int in = 0;
-  int sums[num_threads];  // this stays on the same cahe line: causes FALSE SHARING
-                          // if used inside the parallel code many times
+  const double l = b-a;
+
   omp_set_num_threads(num_threads);
   // parallel code
   #pragma omp parallel
   {
-    long double sum = 0.;         // to solve FALSE SHARING we declare a local counter
-    double l = b-a;               // just to be sure I declare it private
-    int thread_num = omp_get_thread_num();
-    rand_gen gen = init_rand((unsigned short)thread_num);  // by having modified init_rand
+    long double sum = 0.;         // to solve FALSE SHARING we declare a local counter     
+    rand_gen gen = init_rand();  // by having modified init_rand
                                            // we assure to have different random
                                            // generators
 
@@ -60,13 +58,14 @@ double integrate (int num_threads, int samples, int a, int b, double (*f)(double
       double x = next_rand(gen);
       sum += l * f(a + x * l);
     }
-    sums[thread_num] = sum;
+
+    #pragma omp atomic
+    in += sum;
+
     free_rand(gen);
   }
 
   // serial code
-  for (int i=0; i < num_threads; ++i)
-      in += sums[i];
-  integral = in/(double)samples;
+  integral = in / (double)samples;
   return integral;
 }
