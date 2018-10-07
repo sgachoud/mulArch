@@ -34,33 +34,36 @@ int main (int argc, const char *argv[]) {
 
 
 double calculate_pi (int num_threads, int samples) {
-    double pi;
-    unsigned int in = 0;
-    int sums[num_threads];  // this stays on the same cahe line: causes FALSE SHARING
-                            // if used inside the parallel code many times
+    // serial code: initialization of variables
+    double pi = 0.;
+    unsigned long int in = 0;  // counter of the samples fallen inside the quarter
+                               // of the circle
     omp_set_num_threads(num_threads);
     // parallel code
     #pragma omp parallel
     {
-      int cont = 0;         // to solve FALSE SHARING we declare a local counter on
-                            // the private stack of each thread
-      rand_gen gen = init_rand();  // by having modified init_rand
-                                             // we assure to have different random
-                                             // generators
-
-      for(int i=0; i<samples/num_threads; i++){
+      int cont = 0;         // to avoid FALSE SHARING we declare a private counter
+                            // allocated on the stack of each thread
+      rand_gen gen = init_rand();  // initiate differently each random generators
+      // taking care of max_iter
+      unsigned long int max_iter = samples/num_threads;
+      int whoami = omp_get_thread_num();
+      if (!whoami)
+        max_iter += samples % num_threads;
+      // core code
+      for(int i=0; i < max_iter; i++){
         double x = next_rand(gen);
       	double y = next_rand(gen);
         if(x*x + y*y <= 1)
       		cont++;
       }
-      sums[omp_get_thread_num()] = cont;
+      // incrementing the shared variable
+      #pragma omp atomic
+      in += cont;
+      // freeing memory
       free_rand(gen);
     }
-
     // serial code
-    for (int i=0; i < num_threads; ++i)
-        in += sums[i];
     pi = (in << 2) / (double)samples;
     return pi;
 }
