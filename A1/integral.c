@@ -43,33 +43,31 @@ double integrate (int num_threads, int samples, int a, int b, double (*f)(double
 
   double integral;
   unsigned int in = 0;
-  const double l = b-a;
-
+  const double l = b-a;  //never written, so even if shared between threads
+                         //it shouldn't cause false sharing
   omp_set_num_threads(num_threads);
   // parallel code
   #pragma omp parallel
   {
-    long double sum = 0.;         // to solve FALSE SHARING we declare a local counter     
-    rand_gen gen = init_rand();  // by having modified init_rand
-                                           // we assure to have different random
-                                           // generators
-
+    // intantiating private variables
+    long double sum = 0.;         // to solve FALSE SHARING we declare a private counter
+    rand_gen gen = init_rand();
+    // handling max_iter
     int max_iter = samples/num_threads;
-	if(omp_get_thread_num() == 0)
-		max_iter += samples%num_threads;
-
+	  if(omp_get_thread_num() == 0)
+		    max_iter += samples%num_threads;
+    //here the core code starts
     for(int i=0; i < max_iter; i++){
       double x = next_rand(gen);
       sum += l * f(a + x * l);
     }
-
+    //writing the shared variable only once at the end of each thread
     #pragma omp atomic
     in += sum;
-
+    // freeing memory
     free_rand(gen);
   }
-
-  // serial code
+  //back to serial code
   integral = in / (double)samples;
   return integral;
 }
