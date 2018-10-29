@@ -7,57 +7,45 @@ SCIPER      : Your SCIPER numbers
 ============================================================================
 */
 #include <math.h>
+#include <omp.h>
 
 #define INPUT(I,J) input[(I)*length+(J)]
 #define OUTPUT(I,J) output[(I)*length+(J)]
+#define CACHELINESIZE 64
+#define CACHELINENUMBER 512
+// 64 Bytes * 512 = 32KB
+
 
 void simulate(double *input, double *output, int threads, int length, int iterations)
 {
+    // input is a row-major ordered matrix
     double *temp;
     omp_set_num_threads(threads);
     // Parallelize this!!
-    #pragma omp parallel
-    {
-	    for(int n=0; n < iterations; n++)
-	    {
-	    	int j = 1;
-	    	#pragma omp parallel for private(j) num_threads(threads)
-	        for(int i=1; i<length-1; i++)
-	        {
-	            for(j=1; j<length-1; j++)
-	            {
-	                    if ( ((i == length/2-1) || (i== length/2))
-	                        && ((j == length/2-1) || (j == length/2)) )
-	                        continue;
-
-	                    OUTPUT(i,j) = (INPUT(i-1,j-1) + INPUT(i-1,j) + INPUT(i-1,j+1) +
-	                                   INPUT(i,j-1)   + INPUT(i,j)   + INPUT(i,j+1)   +
-	                                   INPUT(i+1,j-1) + INPUT(i+1,j) + INPUT(i+1,j+1) )/9;
-	            }
-	        }
-
-
-    		#pragma omp single
-    		{
-		        temp = input;
-		        input = output;
-		        output = temp;
-	    	}
-	    }
-	}
-}
-
-void simulate_sequencial(double *input, double *output, int threads, int length, int iterations)
-{
-    double *temp;
-    
+    int doubles_per_block = CACHELINESIZE/8;
+    int j = 0;
     // Parallelize this!!
     for(int n=0; n < iterations; n++)
     {
-        for(int i=1; i<length-1; i++)
-        {
-            for(int j=1; j<length-1; j++)
+        // dividing into vertical blocks whose width fit in a 64B line cache
+        int blocks = length / doubles_per_block;
+
+        // initialize block_width with N
+        int block_width = doubles_per_block;
+
+        // looping over blocks
+        for(int b=0; b<blocks; b++){
+            // correcting the last block_width
+            if(b==n-1)
+                block_width += length % doubles_per_block;
+
+            // looping over rows
+            for(int i=1; i<n; i++)
             {
+                // looping over columns
+                for(int h=1; h<block_width; h++)
+                {
+                    j = b*doubles_per_block + h;
                     if ( ((i == length/2-1) || (i== length/2))
                         && ((j == length/2-1) || (j == length/2)) )
                         continue;
@@ -65,6 +53,7 @@ void simulate_sequencial(double *input, double *output, int threads, int length,
                     OUTPUT(i,j) = (INPUT(i-1,j-1) + INPUT(i-1,j) + INPUT(i-1,j+1) +
                                    INPUT(i,j-1)   + INPUT(i,j)   + INPUT(i,j+1)   +
                                    INPUT(i+1,j-1) + INPUT(i+1,j) + INPUT(i+1,j+1) )/9;
+                }
             }
         }
 
