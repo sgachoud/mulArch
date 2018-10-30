@@ -23,64 +23,63 @@ void simulate(double *input, double *output, int threads, int length, int iterat
     double *temp;
     omp_set_num_threads(threads);
     // Parallelize this!!
-    int l = 16;
-    int block_width = l;
-    int block_heigth = l;
+    const int l = 16;
+    const int block_width = l;
+    const int block_heigth = l;
     int j = 0;
     int i = 0;
 
     // checking whether we are lucky and we can exactly split in blocks
-    int blocks = length/l;
-    int extra_l = length%l;
+    const int blocks = length/l;
+    const int extra_l = length%l;
     int max_k, max_h;
-    int h, k;
+    int _h, _k;
+    printf("blocks = %d\nextra_l = %d\n", blocks, extra_l);
     for(int n=0; n < iterations; n++)
     {
-
-
         // looping over blocks
         for(int b1=0; b1<blocks; b1++){
             for(int b2=0; b2<blocks; b2++){
 
                 // fixing dimensions of the block
-                h = 0;
-                k = 0;
+                _h = 0;
+                _k = 0;
                 max_h = l;
                 max_k = l;
-                block_width = l;
-                block_heigth = l;
-                if(b1==blocks-1){
-                    block_width += extra_l;
-                    max_h = block_width-1;
-                }
-                if(!b1)
-                    h = 0;
 
-                if(b2==blocks-1){
-                    block_heigth += extra_l;
-                    max_k = block_heigth-1;
-                }
+                if(b1==blocks-1)
+                    max_h = block_width + extra_l - 1;
+
+                if(!b1)
+                    _h = 1;
+
+                if(b2==blocks-1)
+                    max_k = block_heigth + extra_l - 1;
+
                 if(!b2)
-                    k = 0;
+                    _k = 1;
 
                 // looping over rows.
                 // k identifies the k-th row of the block (b1,b2)
-                for(; k<max_k; k++)
+                for(int k=_k; k<max_k; k++)
                 {
                     // looping over columns
                     // h identifies the h-th columns of the block (b1,b2)
-                    for(; h<max_h; h++)
+                    for(int h=_h; h<max_h; h++)
                     {
                         // (i,j) identifies the corresponding index inside the whole matrix
                         i = b2*l + k;
                         j = b1*l + h;
+                        //printf("(b1,b2) = (%d,%d)\n", b1, b2);
+                        //printf("(k,h) = (%d,%d)\n", k, h);
+                        //printf("(i,j) = (%d,%d)\n", i, j);
                         // implementation of the algorithm
                         if ( ((i == length/2-1) || (i== length/2))
                             && ((j == length/2-1) || (j == length/2)) )
                             continue;
-                        OUTPUT(j,i) = (INPUT(j-1,i-1) + INPUT(j-1,i) + INPUT(j-1,i+1) +
-                                       INPUT(j,i-1)   + INPUT(j,i)   + INPUT(j,i+1)   +
-                                       INPUT(j+1,i-1) + INPUT(j+1,i) + INPUT(j+1,i+1) )/9;
+                        OUTPUT(i,j) = (INPUT(i-1,j-1) + INPUT(i-1,j) + INPUT(i-1,j+1) +
+                                       INPUT(i,j-1)   + INPUT(i,j)   + INPUT(i,j+1)   +
+                                       INPUT(i+1,j-1) + INPUT(i+1,j) + INPUT(i+1,j+1) )/9;
                     }
                 }
             }
