@@ -26,8 +26,10 @@ void simulate(double *input, double *output, int threads, int length, int iterat
 
 
     // checking whether we are lucky and we can exactly split in blocks
-    #pragma omp parallel shared(input, output, temp)
+    #pragma omp parallel
     {
+
+    // initializing private variables
     int whoami = omp_get_thread_num();
     int _i = length/threads*whoami;
     int how_many_i = length/threads;
@@ -37,14 +39,11 @@ void simulate(double *input, double *output, int threads, int length, int iterat
     }
     if (whoami == threads-1)
         how_many_i += length%threads-1;
-    for(int n=0; n < iterations; n++)
-    {
-        // looping over rows.
-        for(int i=_i; i<_i+how_many_i; i++)
-        {
-            // looping over columns
-            for(int j=1; j<length-1; j++)
-            {
+
+    // starting the temporal iterations
+    for(int n=0; n < iterations; n++){
+        for(int i=_i; i<_i+how_many_i; i++){
+            for(int j=1; j<length-1; j++){
                 // implementation of the algorithm
                 if ( ((i == length/2-1) || (i== length/2))
                     && ((j == length/2-1) || (j == length/2)) )
@@ -54,7 +53,10 @@ void simulate(double *input, double *output, int threads, int length, int iterat
                                INPUT(i+1,j-1) + INPUT(i+1,j) + INPUT(i+1,j+1) )/9;
             }
         }
+        // exchanging pointers
         #pragma omp barrier
+        // we need a barrier at the end of the exchange of pointers too!!
+        // for this reason a #pragma omp master (no implicit barrier does not work)
         #pragma omp single
         {
         temp = input;
