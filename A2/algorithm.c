@@ -1,8 +1,8 @@
 /*
 ============================================================================
 Filename    : algorithm.c
-Author      : Your names go here
-SCIPER      : Your SCIPER numbers
+Author      : Martino Milani / Sébastien Gachoud
+SCIPER      : 286204 / 250083
 
 ============================================================================
 */
@@ -11,11 +11,6 @@ SCIPER      : Your SCIPER numbers
 
 #define INPUT(I,J) input[(I)*length+(J)]
 #define OUTPUT(I,J) output[(I)*length+(J)]
-
-// big assumption: cache lines of 64Bytes (that's the dimension on my Mac, you can change it
-#define L1SIZE 32
-// 32 KBytes
-
 
 void simulate(double *input, double *output, int threads, int length, int iterations)
 {
@@ -37,7 +32,7 @@ void simulate(double *input, double *output, int threads, int length, int iterat
         _i = 1;
         how_many_i -= 1;
     }
-    if (whoami == threads-1)
+    else if (whoami == threads-1)
         how_many_i += length%threads-1;
 
     // starting the temporal iterations
@@ -59,7 +54,7 @@ void simulate(double *input, double *output, int threads, int length, int iterat
         // for this reason a #pragma omp master (no implicit barrier does not work)
         #pragma omp single
         {
-        temp = input;
+		temp = input;
         input = output;
         output = temp;
         }
