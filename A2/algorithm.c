@@ -15,29 +15,32 @@ void simulate(double *input, double *output, int threads, int length, int iterat
 {
     double *temp;
     omp_set_num_threads(threads);
+
     // Parallelize this!!
-    #pragma omp parallel
+    #pragma omp parallel num_threads(threads)
     {
+    	printf("%u\n",omp_get_thread_num() );
 	    for(int n=0; n < iterations; n++)
 	    {
-	    	int j = 1;
-	    	#pragma omp parallel for private(j) num_threads(threads)
+	    	#pragma omp for
 	        for(int i=1; i<length-1; i++)
 	        {
-	            for(j=1; j<length-1; j++)
+	            for(int j=1; j<length-1; j++)
 	            {
 	                    if ( ((i == length/2-1) || (i== length/2))
 	                        && ((j == length/2-1) || (j == length/2)) )
-	                        continue;
-
-	                    OUTPUT(i,j) = (INPUT(i-1,j-1) + INPUT(i-1,j) + INPUT(i-1,j+1) +
+	                    {}
+	            		else
+	            		{
+							OUTPUT(i,j) = (INPUT(i-1,j-1) + INPUT(i-1,j) + INPUT(i-1,j+1) +
 	                                   INPUT(i,j-1)   + INPUT(i,j)   + INPUT(i,j+1)   +
 	                                   INPUT(i+1,j-1) + INPUT(i+1,j) + INPUT(i+1,j+1) )/9;
+	            		}
 	            }
 	        }
 
-
-    		#pragma omp single
+	        #pragma omp barrier
+	        #pragma omp single
     		{
 		        temp = input;
 		        input = output;
