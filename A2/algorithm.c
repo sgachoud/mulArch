@@ -13,9 +13,8 @@ SCIPER      : Your SCIPER numbers
 #define OUTPUT(I,J) output[(I)*length+(J)]
 
 // big assumption: cache lines of 64Bytes (that's the dimension on my Mac, you can change it
-#define CACHELINESIZE 64
-#define CACHELINENUMBER 512
-// 64 Bytes * 512 = 32KB
+#define L1SIZE 32
+// 32 KBytes
 
 
 void simulate(double *input, double *output, int threads, int length, int iterations)
@@ -24,50 +23,65 @@ void simulate(double *input, double *output, int threads, int length, int iterat
     double *temp;
     omp_set_num_threads(threads);
     // Parallelize this!!
-    int doubles_per_block = CACHELINESIZE/8; // equal to 8, I did the computation only for
-                                             // readability of the code
+    int l = 16;
+    int block_width = l;
+    int block_heigth = l;
     int j = 0;
-    // Parallelize this!!
+    int i = 0;
+
+    // checking whether we are lucky and we can exactly split in blocks
+    int blocks = length/l;
+    int extra_l = length%l;
+    int max_k, max_h;
+    int h, k;
     for(int n=0; n < iterations; n++)
     {
-        // dividing into vertical blocks whose heigth fit in a 64B line cache
-        int blocks = length / doubles_per_block;
 
-        // initialize block_heigth with doubles_per_block
-        int block_heigth = doubles_per_block;
 
         // looping over blocks
-        for(int b=0; b<blocks; b++){
-            // correcting the last block_heigth
-            if(b==blocks-1)
-                block_heigth += length % doubles_per_block - 1;
-                // the -1 at the end is useful to correctly implement boundary
-                // conditions and not modify the last column of the last block
+        for(int b1=0; b1<blocks; b1++){
+            for(int b2=0; b2<blocks; b2++){
 
-            // looping over columns. The first row is left untouched, also the last one
+                // fixing dimensions of the block
+                h = 0;
+                k = 0;
+                max_h = l;
+                max_k = l;
+                block_width = l;
+                block_heigth = l;
+                if(b1==blocks-1){
+                    block_width += extra_l;
+                    max_h = block_width-1;
+                }
+                if(!b1)
+                    h = 0;
 
-            // PROBLEM: NESTING THIS LOOP IN THE BLOCK CREATES A LOT OF OVERHEAD
-            // SINCE I GOES FROM 1 TO length A NUMBER OF TIMES CORRESPONDING TO
-            // THE NUMBER OF BLOCKS IN THE MATRIX
+                if(b2==blocks-1){
+                    block_heigth += extra_l;
+                    max_k = block_heigth-1;
+                }
+                if(!b2)
+                    k = 0;
 
-            for(int i=1; i<length-1; i++)
-            {
-                // looping over rows
-                // h identifies the h-th columns of the block b
-                for(int h=0; h<block_heigth; h++)
+                // looping over rows.
+                // k identifies the k-th row of the block (b1,b2)
+                for(; k<max_k; k++)
                 {
-                    // j identifies the corresponding index inside the whole matrix
-                    
-                    // PROBLEM: THIS IS AN OVERHEAD OF 20% OF FLOPS!
-                    j = b*doubles_per_block + h;
-
-                    // implementation of the algorithm
-                    if ( ((i == length/2-1) || (i== length/2))
-                        && ((j == length/2-1) || (j == length/2)) )
-                        continue;
-                    OUTPUT(j,i) = (INPUT(j-1,i-1) + INPUT(j-1,i) + INPUT(j-1,i+1) +
-                                   INPUT(j,i-1)   + INPUT(j,i)   + INPUT(j,i+1)   +
-                                   INPUT(j+1,i-1) + INPUT(j+1,i) + INPUT(j+1,i+1) )/9;
+                    // looping over columns
+                    // h identifies the h-th columns of the block (b1,b2)
+                    for(; h<max_h; h++)
+                    {
+                        // (i,j) identifies the corresponding index inside the whole matrix
+                        i = b2*l + k;
+                        j = b1*l + h;
+                        // implementation of the algorithm
+                        if ( ((i == length/2-1) || (i== length/2))
+                            && ((j == length/2-1) || (j == length/2)) )
+                            continue;
+                        OUTPUT(j,i) = (INPUT(j-1,i-1) + INPUT(j-1,i) + INPUT(j-1,i+1) +
+                                       INPUT(j,i-1)   + INPUT(j,i)   + INPUT(j,i+1)   +
+                                       INPUT(j+1,i-1) + INPUT(j+1,i) + INPUT(j+1,i+1) )/9;
+                    }
                 }
             }
         }
