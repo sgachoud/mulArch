@@ -31,47 +31,19 @@ void simulate(double *input, double *output, int threads, int length, int iterat
 
     // initializing private variables
     int whoami = omp_get_thread_num();
-    int _i = 0;
-    int _j = 0;
-    int how_many_i = 0;
-    int how_many_j = 0;
-    int l = 0;
-    // easy:
-    if (threads == 16){
-        l = length/4;
-        // taking care of the i
-        if(whoami<4){
-            _i = 1;
-            how_many_i = l-1;}
-        else if(whoami<8){
-            _i = l;
-            how_many_i = l;}
-        else if(whoami<12){
-            _i = 2*l;
-            how_many_i = l;}
-        else{
-            _i = 3*l;
-            how_many_i = l-1 + length % threads;}
-
-        // taking care of the j
-        if(whoami == 0 || whoami == 4 || whoami == 8 || whoami == 12){
-            _j = 1;
-            how_many_j = l-1;}
-        else if(whoami == 1 || whoami == 5 || whoami == 9 || whoami == 13){
-            _j = l;
-            how_many_j = l;}
-        else if(whoami == 2 || whoami == 6 || whoami == 10 || whoami == 14){
-            _j = 2*l;
-            how_many_j = l;}
-        else if(whoami == 3 || whoami == 7 || whoami == 11 || whoami == 15){
-            _j = 3*l;
-            how_many_j = l-1 + length % threads;}
+    int _i = length/threads*whoami;
+    int how_many_i = length/threads;
+    if (!whoami){
+        _i = 1;
+        how_many_i -= 1;
     }
-    fprintf(stderr, "whoami = %d, _i=%d, how_many_i=%d, _j=%d, how_many_j=%d\n", whoami, _i, how_many_i, _j, how_many_j);
+    if (whoami == threads-1)
+        how_many_i += length%threads-1;
+
     // starting the temporal iterations
     for(int n=0; n < iterations; n++){
         for(int i=_i; i<_i+how_many_i; i++){
-            for(int j=_j; j<_j+how_many_j; j++){
+            for(int j=1; j<length-1; j++){
                 // implementation of the algorithm
                 if ( ((i == length/2-1) || (i== length/2))
                     && ((j == length/2-1) || (j == length/2)) )
