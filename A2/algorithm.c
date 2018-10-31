@@ -19,6 +19,10 @@ void simulate(double *input, double *output, int threads, int length, int iterat
     omp_set_num_threads(threads);
     // Parallelize this!!
 
+    //L1 cache size in B 
+    const int L1_CACHE_SIZE = 32000;
+    const long int DOUBLE_SIZE = sizeof(double);
+
 
     // checking whether we are lucky and we can exactly split in blocks
     #pragma omp parallel
