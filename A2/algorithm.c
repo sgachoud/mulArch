@@ -44,7 +44,7 @@ void simulate(double *input, double *output, int threads, int length, int iterat
     //L1 cache size in B 
     int L1_CACHE_SIZE = 32000;
     int BYTES_PER_MATRIX = L1_CACHE_SIZE / 2;
-    int BLOCK_SIZE = 64;
+    int BLOCK_SIZE = 32;
     int DOUBLE_SIZE = sizeof(double);
     int NB_DOUBLE_PER_MATRIX = BYTES_PER_MATRIX / DOUBLE_SIZE;
     int NB_DOUBLE_IN_BLOCK = BLOCK_SIZE / DOUBLE_SIZE;
