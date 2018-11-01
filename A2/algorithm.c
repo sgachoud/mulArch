@@ -43,10 +43,9 @@ void simulate(double *input, double *output, int threads, int length, int iterat
 
     //L1 cache size in B 
     int L1_CACHE_SIZE = 32000;
-    long int DOUBLE_SIZE = sizeof(double);
-    long int NB_DOUBLE_IN_L1 = L1_CACHE_SIZE / DOUBLE_SIZE;
-    long int SQUARE_SIZE = sqrt(NB_DOUBLE_IN_L1)/3;
-
+    int DOUBLE_SIZE = sizeof(double);
+    int NB_DOUBLE_IN_L1 = L1_CACHE_SIZE / DOUBLE_SIZE;
+    int SQUARE_SIZE = sqrt(NB_DOUBLE_IN_L1/3);
 
     // checking whether we are lucky and we can exactly split in blocks
     #pragma omp parallel
