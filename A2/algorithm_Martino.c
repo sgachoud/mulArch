@@ -12,40 +12,12 @@ SCIPER      : 286204 / 250083
 #define INPUT(I,J) input[(I)*length+(J)]
 #define OUTPUT(I,J) output[(I)*length+(J)]
 
-int min(int a, int b){
-	if(a < b){
-		return a;
-	}
-	return b;
-}
-
-void caresOf(int from_i, int to_i, int from_j, int to_j, double *input, double *output, int length){
-	for (int i = from_i; i < to_i; ++i)
-	{
-		for (int j = from_j; j < to_j; ++j)
-		{
-			if ( ((i == length/2-1) || (i== length/2))
-	                    && ((j == length/2-1) || (j == length/2)) )
-	                    continue;
-	                OUTPUT(i,j) = (INPUT(i-1,j-1) + INPUT(i-1,j) + INPUT(i-1,j+1) +
-	                               INPUT(i,j-1)   + INPUT(i,j)   + INPUT(i,j+1)   +
-	                               INPUT(i+1,j-1) + INPUT(i+1,j) + INPUT(i+1,j+1) )/9;
-		}
-	}
-}
-
 void simulate(double *input, double *output, int threads, int length, int iterations)
 {
     // INPUT IS A ROW-MAJOR ORDERED MATRIX (implicit in line 12)
     double *temp;
     omp_set_num_threads(threads);
     // Parallelize this!!
-
-    //L1 cache size in B 
-    int L1_CACHE_SIZE = 32000;
-    long int DOUBLE_SIZE = sizeof(double);
-    long int NB_DOUBLE_IN_L1 = L1_CACHE_SIZE / DOUBLE_SIZE;
-    long int SQUARE_SIZE = sqrt(NB_DOUBLE_IN_L1)/3;
 
 
     // checking whether we are lucky and we can exactly split in blocks
@@ -65,13 +37,16 @@ void simulate(double *input, double *output, int threads, int length, int iterat
 
     // starting the temporal iterations
     for(int n=0; n < iterations; n++){
-        for(int i=_i; i<_i+how_many_i; i += SQUARE_SIZE){
-        	int imax = min(_i+how_many_i, i + SQUARE_SIZE);
-        	for (int j = 1; j < length - 1; j += SQUARE_SIZE)
-        	{
-        		int jmax = min(length - 1, j + SQUARE_SIZE);
-	            caresOf(i, imax, j, jmax, input, output, length);
-	        }
+        for(int i=_i; i<_i+how_many_i; i++){
+            for(int j=1; j<length-1; j++){
+                // implementation of the algorithm
+                if ( ((i == length/2-1) || (i== length/2))
+                    && ((j == length/2-1) || (j == length/2)) )
+                    continue;
+                OUTPUT(i,j) = (INPUT(i-1,j-1) + INPUT(i-1,j) + INPUT(i-1,j+1) +
+                               INPUT(i,j-1)   + INPUT(i,j)   + INPUT(i,j+1)   +
+                               INPUT(i+1,j-1) + INPUT(i+1,j) + INPUT(i+1,j+1) )/9;
+            }
         }
         // exchanging pointers
         #pragma omp barrier
