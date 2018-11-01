@@ -43,9 +43,14 @@ void simulate(double *input, double *output, int threads, int length, int iterat
 
     //L1 cache size in B 
     int L1_CACHE_SIZE = 32000;
+    int BYTES_PER_MATRIX = L1_CACHE_SIZE / 2;
+    int BLOCK_SIZE = 64;
     int DOUBLE_SIZE = sizeof(double);
-    int NB_DOUBLE_IN_L1 = L1_CACHE_SIZE / DOUBLE_SIZE;
-    int SQUARE_SIZE = sqrt(NB_DOUBLE_IN_L1/3);
+    int NB_DOUBLE_PER_MATRIX = BYTES_PER_MATRIX / DOUBLE_SIZE;
+    int NB_DOUBLE_IN_BLOCK = BLOCK_SIZE / DOUBLE_SIZE;
+    int MAX_WIDTH = NB_DOUBLE_IN_BLOCK ;
+    int MAX_HEIGHT = NB_DOUBLE_PER_MATRIX / (2 * NB_DOUBLE_IN_BLOCK) ;
+    //int SQUARE_SIZE = sqrt(NB_DOUBLE_IN_L1/3);
 
     // checking whether we are lucky and we can exactly split in blocks
     #pragma omp parallel
@@ -64,11 +69,11 @@ void simulate(double *input, double *output, int threads, int length, int iterat
 
     // starting the temporal iterations
     for(int n=0; n < iterations; n++){
-        for(int i=_i; i<_i+how_many_i; i += SQUARE_SIZE){
-        	int imax = min(_i+how_many_i, i + SQUARE_SIZE);
-        	for (int j = 1; j < length - 1; j += SQUARE_SIZE)
+        for(int i=_i; i<_i+how_many_i; i += MAX_WIDTH){
+        	int imax = min(_i+how_many_i, i + MAX_WIDTH);
+        	for (int j = 1; j < length - 1; j += MAX_HEIGHT)
         	{
-        		int jmax = min(length - 1, j + SQUARE_SIZE);
+        		int jmax = min(length - 1, j + MAX_HEIGHT);
 	            caresOf(i, imax, j, jmax, input, output, length);
 	        }
         }
