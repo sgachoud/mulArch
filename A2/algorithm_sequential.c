@@ -12,7 +12,7 @@ SCIPER      : 286204 / 250083
 #define INPUT(I,J) input[(I)*length+(J)]
 #define OUTPUT(I,J) output[(I)*length+(J)]
 
-void simulate_sequencial(double *input, double *output, int threads, int length, int iterations)
+void simulate(double *input, double *output, int threads, int length, int iterations)
 {
     double *temp;
     
