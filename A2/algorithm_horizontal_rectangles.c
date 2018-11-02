@@ -1,6 +1,6 @@
 /*
 ============================================================================
-Filename    : algorithm_rectangles.c
+Filename    : algorithm_horizontal_rectangles.c
 Author      : Martino Milani / Sébastien Gachoud
 SCIPER      : 286204 / 250083
 

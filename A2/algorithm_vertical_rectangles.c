@@ -1,6 +1,6 @@
 /*
 ============================================================================
-Filename    : algorithm_rectangles.c
+Filename    : algorithm_vertical_rectangles.c
 Author      : Martino Milani / Sébastien Gachoud
 SCIPER      : 286204 / 250083
 
@@ -44,10 +44,12 @@ void simulate(double *input, double *output, int threads, int length, int iterat
     //L1 cache size in B 
     int L1_CACHE_SIZE = 32000;
     int BYTES_PER_MATRIX = L1_CACHE_SIZE / 2;
+    int BLOCK_SIZE = 64;
     int DOUBLE_SIZE = sizeof(double);
     int NB_DOUBLE_PER_MATRIX = BYTES_PER_MATRIX / DOUBLE_SIZE;
-    int MAX_HEIGHT = 1;
-    int MAX_WIDTH = NB_DOUBLE_PER_MATRIX / 2;
+    int NB_DOUBLE_IN_BLOCK = BLOCK_SIZE / DOUBLE_SIZE;
+    int MAX_WIDTH = NB_DOUBLE_IN_BLOCK;
+    int MAX_HEIGHT = NB_DOUBLE_PER_MATRIX / (3 * NB_DOUBLE_IN_BLOCK);
 
     // checking whether we are lucky and we can exactly split in blocks
     #pragma omp parallel
@@ -66,11 +68,11 @@ void simulate(double *input, double *output, int threads, int length, int iterat
 
     // starting the temporal iterations
     for(int n=0; n < iterations; n++){
-    	for (int j = 1; j < length - 1; j += MAX_WIDTH)
-    	{
-        	int jmax = min(length - 1, j + MAX_WIDTH);
-        	for(int i=_i; i<_i+how_many_i; i += MAX_HEIGHT){
-        		int imax = min(_i+how_many_i, i + MAX_HEIGHT);
+        for(int i=_i; i<_i+how_many_i; i += MAX_HEIGHT){
+        	int imax = min(_i+how_many_i, i + MAX_HEIGHT);
+        	for (int j = 1; j < length - 1; j += MAX_WIDTH)
+        	{
+        		int jmax = min(length - 1, j + MAX_WIDTH);
 	            caresOf(i, imax, j, jmax, input, output, length);
 	        }
         }
