@@ -61,23 +61,44 @@ void GPU_array_process(double *input, double *output, int length, int iterations
 
     /* Preprocessing goes here */
 
+    /*----- What I did -----*/
+    const long SIZE = length * length;
+    /*----------------------*/
+
     cudaEventRecord(cpy_H2D_start);
     /* Copying array from host to device goes here */
+
+    /*----- What I did -----*/
+    cudaMalloc((void**)&input, SIZE);
+    cudaMalloc(void**)&output, SIZE);
+    /*----------------------*/
+
     cudaEventRecord(cpy_H2D_end);
     cudaEventSynchronize(cpy_H2D_end);
 
     //Copy array from host to device
     cudaEventRecord(comp_start);
     /* GPU calculation goes here */
+
+    /*----- What I did -----*/
+    /*----------------------*/
+
     cudaEventRecord(comp_end);
     cudaEventSynchronize(comp_end);
 
     cudaEventRecord(cpy_D2H_start);
     /* Copying array from device to host goes here */
+
+    /*----- What I did -----*/
+    /*----------------------*/
+
     cudaEventRecord(cpy_D2H_end);
     cudaEventSynchronize(cpy_D2H_end);
 
     /* Postprocessing goes here */
+
+    /*----- What I did -----*/
+    /*----------------------*/
 
     float time;
     cudaEventElapsedTime(&time, cpy_H2D_start, cpy_H2D_end);
