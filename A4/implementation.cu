@@ -63,14 +63,19 @@ void GPU_array_process(double *input, double *output, int length, int iterations
 
     /*----- What I did -----*/
     const long SIZE = length * length;
+    double* gpu_input;
+    double* gpu_output;
     /*----------------------*/
 
     cudaEventRecord(cpy_H2D_start);
     /* Copying array from host to device goes here */
 
     /*----- What I did -----*/
-    cudaMalloc((void**)&input, SIZE);
-    cudaMalloc(void**)&output, SIZE);
+    cudaMalloc((void**)&gpu_input, SIZE);
+    cudaMemcpy((void*)gpu_input, (void*)input, SIZE, cudaMemcpyHostToDevice);
+
+    cudaMalloc(void**)&gpu_output, SIZE);
+    cudaMemcpy((void*)gpu_output, (void*)output, SIZE, cudaMemcpyHostToDevice);
     /*----------------------*/
 
     cudaEventRecord(cpy_H2D_end);
@@ -81,6 +86,7 @@ void GPU_array_process(double *input, double *output, int length, int iterations
     /* GPU calculation goes here */
 
     /*----- What I did -----*/
+    gpu_computation(gpu_input, gpu_output, length, iterations);
     /*----------------------*/
 
     cudaEventRecord(comp_end);
@@ -90,6 +96,7 @@ void GPU_array_process(double *input, double *output, int length, int iterations
     /* Copying array from device to host goes here */
 
     /*----- What I did -----*/
+    cudaMemcpy((void*)output, (void*)gpu_output, SIZE, cudaMemcpyDeviceToHost);
     /*----------------------*/
 
     cudaEventRecord(cpy_D2H_end);
@@ -98,6 +105,8 @@ void GPU_array_process(double *input, double *output, int length, int iterations
     /* Postprocessing goes here */
 
     /*----- What I did -----*/
+    cudaFree(&gpu_input);
+    cudaFree(&gpu_output);
     /*----------------------*/
 
     float time;
@@ -109,4 +118,9 @@ void GPU_array_process(double *input, double *output, int length, int iterations
 
     cudaEventElapsedTime(&time, cpy_D2H_start, cpy_D2H_end);
     cout<<"Device to Host MemCpy takes "<<setprecision(4)<<time/1000<<"s"<<endl;
+}
+
+__global__
+void gpu_computation(double *input, double *output, int length, int iterations){
+    //blabla
 }
