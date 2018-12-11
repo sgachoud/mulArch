@@ -62,9 +62,11 @@ void GPU_array_process(double *input, double *output, int length, int iterations
     /* Preprocessing goes here */
 
     /*----- What I did -----*/
-    const long SIZE = length * length;
+    const long SIZE = length * length * sizeof(double);
     double* gpu_input;
     double* gpu_output;
+    dim3 nbBlocks(2,3);
+    dim3 threadsPerBlock(3,4);
     /*----------------------*/
 
     cudaEventRecord(cpy_H2D_start);
@@ -86,7 +88,15 @@ void GPU_array_process(double *input, double *output, int length, int iterations
     /* GPU calculation goes here */
 
     /*----- What I did -----*/
-    gpu_computation(gpu_input, gpu_output, length, iterations);
+    for(int iter(0); i < iterations; i++){
+        if(iter%2){ 
+            gpu_computation <<< nbBlocks, threadsPerBlock >>> (gpu_output, gpu_input, length);
+        }
+        else{
+            gpu_computation <<< nbBlocks, threadsPerBlock >>> (gpu_input, gpu_output, length);
+        }
+        cudaThreadSynchronize();
+    }
     /*----------------------*/
 
     cudaEventRecord(comp_end);
@@ -121,6 +131,22 @@ void GPU_array_process(double *input, double *output, int length, int iterations
 }
 
 __global__
-void gpu_computation(double *input, double *output, int length, int iterations){
-    //blabla
+void gpu_computation(double *input, double *output, int length){
+    int x_glob = (blockIdx.x * blockDim.x) + threadIdx.x + 1;   //+1 to avoid first column
+    int y_glob = (blockIdx.y * blockDim.y) + threadIdx.y + 1;   //+1 to avoid first row
+    int element_id = (y_glob * length) + x_glob;
+    if ( ((x_glob == length/2-1) || (x_glob == length/2)) && ((y_glob == length/2-1) || (y_glob == length/2)) 
+        || element_id >= length - 1)
+    {
+        return;
+    }
+    output[element_id] = (input[(y_glob-1)*(length)+(x_glob-1)] +
+                                            input[(y_glob-1)*(length)+(x_glob)]   +
+                                            input[(y_glob-1)*(length)+(x_glob+1)] +
+                                            input[(y_glob)*(length)+(x_glob-1)]   +
+                                            input[(y_glob)*(length)+(x_glob)]     +
+                                            input[(y_glob)*(length)+(x_glob+1)]   +
+                                            input[(y_glob+1)*(length)+(x_glob-1)] +
+                                            input[(y_glob+1)*(length)+(x_glob)]   +
+                                            input[(y_glob+1)*(length)+(x_glob+1)] ) / 9;
 }
