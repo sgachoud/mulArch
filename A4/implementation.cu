@@ -46,6 +46,8 @@ void array_process(double *input, double *output, int length, int iterations)
     }
 }
 
+__global__
+void gpu_computation(double *input, double *output, int length);
 
 // GPU Optimized function
 void GPU_array_process(double *input, double *output, int length, int iterations)
@@ -67,16 +69,16 @@ void GPU_array_process(double *input, double *output, int length, int iterations
     double* gpu_output;
     dim3 nbBlocks(2,3);
     dim3 threadsPerBlock(3,4);
+    cudaMalloc((void**)&gpu_input, SIZE);
+    cudaMalloc((void**)&gpu_output, SIZE);
     /*----------------------*/
 
     cudaEventRecord(cpy_H2D_start);
     /* Copying array from host to device goes here */
 
     /*----- What I did -----*/
-    cudaMalloc((void**)&gpu_input, SIZE);
     cudaMemcpy((void*)gpu_input, (void*)input, SIZE, cudaMemcpyHostToDevice);
 
-    cudaMalloc(void**)&gpu_output, SIZE);
     cudaMemcpy((void*)gpu_output, (void*)output, SIZE, cudaMemcpyHostToDevice);
     /*----------------------*/
 
@@ -88,7 +90,7 @@ void GPU_array_process(double *input, double *output, int length, int iterations
     /* GPU calculation goes here */
 
     /*----- What I did -----*/
-    for(int iter(0); i < iterations; i++){
+    for(int iter(0); iter < iterations; iter++){
         if(iter%2){ 
             gpu_computation <<< nbBlocks, threadsPerBlock >>> (gpu_output, gpu_input, length);
         }
@@ -106,7 +108,13 @@ void GPU_array_process(double *input, double *output, int length, int iterations
     /* Copying array from device to host goes here */
 
     /*----- What I did -----*/
-    cudaMemcpy((void*)output, (void*)gpu_output, SIZE, cudaMemcpyDeviceToHost);
+    if(iterations%2==0)
+    {
+        cudaMemcpy((void*)input, (void*)gpu_output, SIZE, cudaMemcpyDeviceToHost);
+    }
+    else{
+        cudaMemcpy((void*)output, (void*)gpu_output, SIZE, cudaMemcpyDeviceToHost);
+    }
     /*----------------------*/
 
     cudaEventRecord(cpy_D2H_end);
