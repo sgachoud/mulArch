@@ -71,12 +71,11 @@ void GPU_array_process(double *input, double *output, int length, int iterations
     double* gpu_output;
     dim3 threadsPerBlock(32,32);
     dim3 nbBlocks(length / threadsPerBlock.x + 1, length / threadsPerBlock.y + 1);
-    const long PADDED_SIZE = (nbBlocks.x+1) * threadsPerBlock.x * (nbBlocks.y+1) * threadsPerBlock.y * sizeof(double); //+1 to avoid going out of the input
     cudaSetDevice(0);
-    if(cudaMalloc((void**)&gpu_input, PADDED_SIZE) != cudaSuccess){
+    if(cudaMalloc((void**)&gpu_input, SIZE) != cudaSuccess){
         cerr << "Error allocating input" << endl;
     }
-    if(cudaMalloc((void**)&gpu_output, PADDED_SIZE) != cudaSuccess){
+    if(cudaMalloc((void**)&gpu_output, SIZE) != cudaSuccess){
         cerr << "Error allocating output" << endl;
     }
     /*----------------------*/
@@ -149,9 +148,13 @@ void gpu_computation_row(double* input, double* output, int length){
     int y_glob = (blockIdx.y * blockDim.y) + threadIdx.y + 1;   //+1 to avoid first row
     int element_id = (y_glob * length) + x_glob;
 
-    output[element_id] = input[(y_glob)*(length)+(x_glob-1)] +
-                         input[(y_glob)*(length)+(x_glob)]   +
-                         input[(y_glob)*(length)+(x_glob+1)];
+    if(x_glob >= length - 1 || y_glob >= length-1){
+        return;
+    }
+
+    output[element_id] = input[element_id - 1] +
+                         input[element_id]     +
+                         input[element_id + 1];
 }
 
 __global__
@@ -159,11 +162,13 @@ void gpu_computation_col(double* input, double* output, int length){
     int x_glob = (blockIdx.x * blockDim.x) + threadIdx.x + 1;   //+1 to avoid first column
     int y_glob = (blockIdx.y * blockDim.y) + threadIdx.y + 1;   //+1 to avoid first row
     int element_id = (y_glob * length) + x_glob;
-    int isCenter = ((x_glob == length/2-1) || (x_glob == length/2)) && ((y_glob == length/2-1) || (y_glob == length/2));
-    int isBorder = x_glob == 0 || y_glob == 0 || x_glob >= length - 1 || y_glob >= length-1;
+    bool isCenter = ((x_glob == length/2-1) || (x_glob == length/2)) && ((y_glob == length/2-1) || (y_glob == length/2));
 
-    output[element_id] = isCenter ? 1000 : (isBorder ? 0 :
-                                           (input[(y_glob-1)*(length)+(x_glob)] +
-                                            input[(y_glob)*(length)+(x_glob)]   +
-                                            input[(y_glob+1)*(length)+(x_glob)]) / 9);
+    if(x_glob >= length - 1 || y_glob >= length-1){
+        return;
+    }
+
+    output[element_id] = isCenter ? 1000 : ((input[element_id - length] +
+                                             input[element_id]          +
+                                             input[element_id + length]) / 9.0);
 }

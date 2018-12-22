@@ -152,73 +152,6 @@ void GPU_array_process(double *input, double *output, int length, int iterations
     cout<<"Device to Host MemCpy takes "<<setprecision(4)<<time/1000<<"s"<<endl;
 }
 
-/*With & instead of branches single kernel*/
-//DOES NOT PRODUCE CORRECT RESULT : need to extend ones
-__global__
-void gpu_computation(double* input, double* output, int length){
-    int x_glob = (blockIdx.x * blockDim.x) + threadIdx.x + 1;   //+1 to avoid first column
-    int y_glob = (blockIdx.y * blockDim.y) + threadIdx.y + 1;   //+1 to avoid first row
-    int element_id = (y_glob * length) + x_glob;
-    bool isCenter = ((x_glob == length/2-1) || (x_glob == length/2)) && ((y_glob == length/2-1) || (y_glob == length/2));
-    bool isBorder = x_glob == 0 || y_glob == 0 || x_glob >= length - 1 || y_glob >= length-1;
-
-    double temp((input[(y_glob-1)*(length)+(x_glob-1)] +
-                 input[(y_glob-1)*(length)+(x_glob)]   +
-                 input[(y_glob-1)*(length)+(x_glob+1)] +
-                 input[(y_glob)*(length)+(x_glob-1)]   +
-                 input[(y_glob)*(length)+(x_glob)]     +
-                 input[(y_glob)*(length)+(x_glob+1)]   +
-                 input[(y_glob+1)*(length)+(x_glob-1)] +
-                 input[(y_glob+1)*(length)+(x_glob)]   +
-                input[(y_glob+1)*(length)+(x_glob+1)]) / 9);
-    output[element_id] = (isCenter & 1000) + (isBorder & 0) + (!(isCenter || isBorder) & temp);
-}
-/**/
-
-/*With mult instead of branches single kernel
-__global__
-void gpu_computation(double* input, double* output, int length){
-    int x_glob = (blockIdx.x * blockDim.x) + threadIdx.x + 1;   //+1 to avoid first column
-    int y_glob = (blockIdx.y * blockDim.y) + threadIdx.y + 1;   //+1 to avoid first row
-    int element_id = (y_glob * length) + x_glob;
-    int isCenter = ((x_glob == length/2-1) || (x_glob == length/2)) && ((y_glob == length/2-1) || (y_glob == length/2));
-    int isBorder = x_glob == 0 || y_glob == 0 || x_glob >= length - 1 || y_glob >= length-1;
-
-    output[element_id] = isCenter * 1000 + isBorder * 0 + !(isCenter || isBorder) *
-                                            ((input[(y_glob-1)*(length)+(x_glob-1)] +
-                                            input[(y_glob-1)*(length)+(x_glob)]   +
-                                            input[(y_glob-1)*(length)+(x_glob+1)] +
-                                            input[(y_glob)*(length)+(x_glob-1)]   +
-                                            input[(y_glob)*(length)+(x_glob)]     +
-                                            input[(y_glob)*(length)+(x_glob+1)]   +
-                                            input[(y_glob+1)*(length)+(x_glob-1)] +
-                                            input[(y_glob+1)*(length)+(x_glob)]   +
-                                            input[(y_glob+1)*(length)+(x_glob+1)] ) / 9);
-}
-*/
-
-/*Without branches single kernel
-__global__
-void gpu_computation(double* input, double* output, int length){
-    int x_glob = (blockIdx.x * blockDim.x) + threadIdx.x + 1;   //+1 to avoid first column
-    int y_glob = (blockIdx.y * blockDim.y) + threadIdx.y + 1;   //+1 to avoid first row
-    int element_id = (y_glob * length) + x_glob;
-    int isCenter = ((x_glob == length/2-1) || (x_glob == length/2)) && ((y_glob == length/2-1) || (y_glob == length/2));
-    int isBorder = x_glob == 0 || y_glob == 0 || x_glob >= length - 1 || y_glob >= length-1;
-
-    output[element_id] = isCenter ? 1000 : (isBorder ? 0 : (input[(y_glob-1)*(length)+(x_glob-1)] +
-                                            input[(y_glob-1)*(length)+(x_glob)]   +
-                                            input[(y_glob-1)*(length)+(x_glob+1)] +
-                                            input[(y_glob)*(length)+(x_glob-1)]   +
-                                            input[(y_glob)*(length)+(x_glob)]     +
-                                            input[(y_glob)*(length)+(x_glob+1)]   +
-                                            input[(y_glob+1)*(length)+(x_glob-1)] +
-                                            input[(y_glob+1)*(length)+(x_glob)]   +
-                                            input[(y_glob+1)*(length)+(x_glob+1)] ) / 9);
-}
-*/
-
-/*With branches single kernel
 __global__
 void gpu_computation(double* input, double* output, int length){
     int x_glob = (blockIdx.x * blockDim.x) + threadIdx.x + 1;   //+1 to avoid first column
@@ -239,4 +172,3 @@ void gpu_computation(double* input, double* output, int length){
                                             input[(y_glob+1)*(length)+(x_glob)]   +
                                             input[(y_glob+1)*(length)+(x_glob+1)] ) / 9;
 }
-*/
