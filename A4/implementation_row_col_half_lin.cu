@@ -70,7 +70,7 @@ void GPU_array_process(double *input, double *output, int length, int iterations
     double* gpu_input;
     double* gpu_output;
     dim3 threadsPerBlock(128);
-    dim3 nbBlocks(length * length / threadsPerBlock.x + 1);
+    dim3 nbBlocks(length / threadsPerBlock.x + 1, length / threadsPerBlock.y + 1);
     cudaSetDevice(0);
     if(cudaMalloc((void**)&gpu_input, SIZE) != cudaSuccess){
         cerr << "Error allocating input" << endl;
@@ -144,12 +144,11 @@ void GPU_array_process(double *input, double *output, int length, int iterations
 
 __global__
 void gpu_computation_row(double* input, double* output, int length){
-    int element_id = blockIdx.x * blockDim.x + threadIdx.x + 1;
+    int x_glob = (blockIdx.x * blockDim.x) + threadIdx.x + 1;   //+1 to avoid first column
+    int y_glob = (blockIdx.y * blockDim.y) + threadIdx.y + 1;   //+1 to avoid first row
+    int element_id = (y_glob * length) + x_glob;
 
-    int x_glob = element_id % length;
-    int y_glob = element_id / length;
-
-    if(x_glob <= 0 || y_glob <= 0 || x_glob >= length - 1 || y_glob >= length-1){
+    if(x_glob >= length - 1 || y_glob >= length-1){
         return;
     }
 
@@ -160,13 +159,12 @@ void gpu_computation_row(double* input, double* output, int length){
 
 __global__
 void gpu_computation_col(double* input, double* output, int length){
-    int element_id = blockIdx.x * blockDim.x + threadIdx.x + 1;
-
-    int x_glob = element_id % length;
-    int y_glob = element_id / length;
+    int x_glob = (blockIdx.x * blockDim.x) + threadIdx.x + 1;   //+1 to avoid first column
+    int y_glob = (blockIdx.y * blockDim.y) + threadIdx.y + 1;   //+1 to avoid first row
+    int element_id = (y_glob * length) + x_glob;
     bool isCenter = ((x_glob == length/2-1) || (x_glob == length/2)) && ((y_glob == length/2-1) || (y_glob == length/2));
 
-    if(x_glob <= 0 || y_glob <= 0 || x_glob >= length - 1 || y_glob >= length-1){
+    if(x_glob >= length - 1 || y_glob >= length-1){
         return;
     }
 
