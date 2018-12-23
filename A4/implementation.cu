@@ -1,8 +1,8 @@
 /*
 ============================================================================
-Filename    : implementation.cu
-Author      : Martino Milani / Sébastien Gachoud
-SCIPER      : 286204 / 250083
+Filename    : algorithm.c
+Author      : Your name goes here
+SCIPER      : Your SCIPER number
 ============================================================================
 */
 
@@ -47,7 +47,9 @@ void array_process(double *input, double *output, int length, int iterations)
 }
 
 __global__
-void gpu_computation(double* input, double* output, int length);
+void gpu_computation_row(double* input, double* output, int length);
+__global__
+void gpu_computation_col(double* input, double* output, int length);
 
 // GPU Optimized function
 void GPU_array_process(double *input, double *output, int length, int iterations)
@@ -67,14 +69,13 @@ void GPU_array_process(double *input, double *output, int length, int iterations
     const long SIZE = length * length * sizeof(double);
     double* gpu_input;
     double* gpu_output;
-    dim3 threadsPerBlock(32,32);
-    dim3 nbBlocks(length / threadsPerBlock.x + 1, length / threadsPerBlock.y + 1);
-    const long PADDED_SIZE = (nbBlocks.x+1) * threadsPerBlock.x * (nbBlocks.y+1) * threadsPerBlock.y * sizeof(double); //+1 to avoid going out of the input
+    dim3 threadsPerBlock(128);
+    dim3 nbBlocks(length * length / threadsPerBlock.x + 1);
     cudaSetDevice(0);
-    if(cudaMalloc((void**)&gpu_input, PADDED_SIZE) != cudaSuccess){
+    if(cudaMalloc((void**)&gpu_input, SIZE) != cudaSuccess){
         cerr << "Error allocating input" << endl;
     }
-    if(cudaMalloc((void**)&gpu_output, PADDED_SIZE) != cudaSuccess){
+    if(cudaMalloc((void**)&gpu_output, SIZE) != cudaSuccess){
         cerr << "Error allocating output" << endl;
     }
     /*----------------------*/
@@ -101,12 +102,8 @@ void GPU_array_process(double *input, double *output, int length, int iterations
 
     /*----- What I did -----*/
     for(int iter(0); iter < iterations; iter++){
-        if(iter%2){ 
-            gpu_computation <<< nbBlocks, threadsPerBlock >>> (gpu_output, gpu_input, length);
-        }
-        else{
-            gpu_computation <<< nbBlocks, threadsPerBlock >>> (gpu_input, gpu_output, length);
-        }
+        gpu_computation_row <<< nbBlocks, threadsPerBlock >>> (gpu_input, gpu_output, length);
+        gpu_computation_col <<< nbBlocks, threadsPerBlock >>> (gpu_output, gpu_input, length);
         cudaThreadSynchronize();
     }
     /*----------------------*/
@@ -118,16 +115,9 @@ void GPU_array_process(double *input, double *output, int length, int iterations
     /* Copying array from device to host goes here */
 
     /*----- What I did -----*/
-    if(iterations%2==0)
-    {
-        if(cudaMemcpy(output, gpu_input, SIZE, cudaMemcpyDeviceToHost) != cudaSuccess){
-            cerr << "failed to retrieve gpu_input" << endl;
-        }
-    }
-    else{
-        if(cudaMemcpy(output, gpu_output, SIZE, cudaMemcpyDeviceToHost) != cudaSuccess){
-            cerr << "failed to retrieve gpu_output" << endl;
-        }
+    //due to the computation above, the desired output is in gpu_input
+    if(cudaMemcpy(output, gpu_input, SIZE, cudaMemcpyDeviceToHost) != cudaSuccess){
+        cerr << "failed to retrieve gpu_output from GPU" << endl;
     }
     /*----------------------*/
 
@@ -153,22 +143,34 @@ void GPU_array_process(double *input, double *output, int length, int iterations
 }
 
 __global__
-void gpu_computation(double* input, double* output, int length){
-    int x_glob = (blockIdx.x * blockDim.x) + threadIdx.x + 1;   //+1 to avoid first column
-    int y_glob = (blockIdx.y * blockDim.y) + threadIdx.y + 1;   //+1 to avoid first row
-    int element_id = (y_glob * length) + x_glob;
-    if ( ((x_glob == length/2-1) || (x_glob == length/2)) && ((y_glob == length/2-1) || (y_glob == length/2)) 
-        || x_glob >= length - 1 || y_glob >= length-1)
-    {
+void gpu_computation_row(double* input, double* output, int length){
+    int element_id = blockIdx.x * blockDim.x + threadIdx.x + 1;
+
+    int x_glob = element_id % length;
+    int y_glob = element_id / length;
+
+    if(x_glob <= 0 || y_glob <= 0 || x_glob >= length - 1 || y_glob >= length-1){
         return;
     }
-    output[element_id] = (input[(y_glob-1)*(length)+(x_glob-1)] +
-                                            input[(y_glob-1)*(length)+(x_glob)]   +
-                                            input[(y_glob-1)*(length)+(x_glob+1)] +
-                                            input[(y_glob)*(length)+(x_glob-1)]   +
-                                            input[(y_glob)*(length)+(x_glob)]     +
-                                            input[(y_glob)*(length)+(x_glob+1)]   +
-                                            input[(y_glob+1)*(length)+(x_glob-1)] +
-                                            input[(y_glob+1)*(length)+(x_glob)]   +
-                                            input[(y_glob+1)*(length)+(x_glob+1)] ) / 9;
+
+    output[element_id] = input[element_id - 1] +
+                         input[element_id]     +
+                         input[element_id + 1];
+}
+
+__global__
+void gpu_computation_col(double* input, double* output, int length){
+    int element_id = blockIdx.x * blockDim.x + threadIdx.x + 1;
+
+    int x_glob = element_id % length;
+    int y_glob = element_id / length;
+    bool isCenter = ((x_glob == length/2-1) || (x_glob == length/2)) && ((y_glob == length/2-1) || (y_glob == length/2));
+
+    if(x_glob <= 0 || y_glob <= 0 || x_glob >= length - 1 || y_glob >= length-1){
+        return;
+    }
+
+    output[element_id] = isCenter ? 1000 : ((input[element_id - length] +
+                                             input[element_id]          +
+                                             input[element_id + length]) / 9.0);
 }
